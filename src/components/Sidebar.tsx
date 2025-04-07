@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 
 // Definiere die Menüpunkte
 const menuItems = [
-  { path: '/', name: 'Status' }, // Entspricht "Pokédex" oder Hauptübersicht
+  { path: '/', name: 'Dashboard' }, // Entspricht "Pokédex" oder Hauptübersicht
   { path: '/schedule', name: 'Calendar' }, // Entspricht "Pokémon" oder Zeitplan
   { path: '/tasks', name: 'Quest Log' }, // Entspricht "Bag" oder Aufgaben
   { path: '/pomodoro', name: 'Timer' }, // Entspricht "Pokégear" oder Timer
