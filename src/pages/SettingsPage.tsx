@@ -1,6 +1,6 @@
 // src/pages/SettingsPage.tsx
-import React from 'react';
-import { useLocalStorage } from '../hooks/useLocalStorage'; // Importiere den Hook
+import React, { useState } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage'; // Importiere den Hook für Kalenderdaten
 
 // Definiere den Typ für die Einstellungen
 interface PomodoroSettings {
@@ -11,67 +11,142 @@ interface PomodoroSettings {
 }
 
 const SettingsPage: React.FC = () => {
-  const [settings, setSettings] = useLocalStorage<PomodoroSettings>('pomodoroSettings', {
-    workMinutes: 25, // Standardwerte
+  // Pomodoro Settings (Beispielhaft, falls benötigt)
+  const [pomodoroSettings, setPomodoroSettings] = useLocalStorage('pomodoroSettings', {
+    workMinutes: 25,
     shortBreakMinutes: 5,
     longBreakMinutes: 15,
     sessionsBeforeLongBreak: 4,
   });
 
-  // Handler zum Aktualisieren der Einstellungen
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setSettings(prev => ({
+  const [isImporting, setIsImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [, setCalendarIcsData] = useLocalStorage<string | null>('calendarIcsData', null); // State für rohe ICS-Daten
+
+  // Pomodoro Settings Change Handler (Beispielhaft)
+  const handlePomodoroChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setPomodoroSettings(prev => ({
       ...prev,
-      [name]: parseInt(value, 10) || 0 // Stelle sicher, dass es eine Zahl ist
+      [name]: parseInt(value, 10) || 0, // Konvertiere zu Zahl
     }));
+  };
+
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.ics')) {
+      setImportMessage('Fehler: Bitte wählen Sie eine .ics Datei aus.');
+      return;
+    }
+
+    setIsImporting(true);
+    setImportMessage('Lese Kalenderdatei...');
+
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const content = e.target?.result;
+      if (typeof content === 'string') {
+        setCalendarIcsData(content); // Speichere rohe ICS-Daten im Local Storage
+        setIsImporting(false);
+        setImportMessage('Kalenderdaten erfolgreich importiert!');
+        setTimeout(() => setImportMessage(null), 3000);
+      } else {
+        setIsImporting(false);
+        setImportMessage('Fehler beim Lesen der Datei.');
+        setTimeout(() => setImportMessage(null), 3000);
+      }
+    };
+
+    reader.onerror = () => {
+      setIsImporting(false);
+      setImportMessage('Fehler beim Lesen der Datei.');
+      setTimeout(() => setImportMessage(null), 3000);
+    };
+
+    reader.readAsText(file); // Lese die Datei als Text
+  };
+
+  // Dark Theme Handling (kommt im nächsten Schritt)
+  const [isDarkMode, setIsDarkMode] = useLocalStorage('darkMode', false);
+  const handleThemeToggle = () => {
+     setIsDarkMode(prev => !prev);
+     // Logik zum Umschalten der Theme-Klasse wird in App.tsx benötigt
   };
 
   // --- Hier könnten auch die manuellen Uni-Daten rein ---
   // const [manualUniData, setManualUniData] = useLocalStorage...
 
   return (
-    // Box für den Seiteninhalt
-    <div className="gbc-border">
-      <h2 className='text-lg font-bold mb-3'>OPTIONS</h2>
-
-      {/* Pomodoro Config Section */}
-      <div className="mb-6">
-          <h3 className='font-bold mb-2 border-b border-pkmn-medium pb-1'>Pomodoro Timer</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm mt-2">
-              <div className="flex flex-col">
-                  <label htmlFor="workMinutes" className="mb-1">Work (min):</label>
-                  <input type="number" id="workMinutes" name="workMinutes" value={settings.workMinutes} onChange={handleChange} className="pkmn-input w-full"/>
-              </div>
-              <div className="flex flex-col">
-                  <label htmlFor="shortBreakMinutes" className="mb-1">Short Break (min):</label>
-                  <input type="number" id="shortBreakMinutes" name="shortBreakMinutes" value={settings.shortBreakMinutes} onChange={handleChange} className="pkmn-input w-full"/>
-              </div>
-              <div className="flex flex-col">
-                  <label htmlFor="longBreakMinutes" className="mb-1">Long Break (min):</label>
-                  <input type="number" id="longBreakMinutes" name="longBreakMinutes" value={settings.longBreakMinutes} onChange={handleChange} className="pkmn-input w-full"/>
-              </div>
-               <div className="flex flex-col">
-                  <label htmlFor="sessionsBeforeLongBreak" className="mb-1">Sessions / Long Break:</label>
-                  <input type="number" id="sessionsBeforeLongBreak" name="sessionsBeforeLongBreak" value={settings.sessionsBeforeLongBreak} onChange={handleChange} className="pkmn-input w-full"/>
-              </div>
+    <div className="pkmn-container">
+      <div className="pkmn-card">
+        <h2>Optionen</h2>
+        
+        <div className="settings-section">
+          <h3 className="text-lg font-bold mb-4">Kalender Import</h3>
+          
+          <div className="mb-4">
+            <p className="mb-2">Importieren Sie Ihren Stundenplan aus CampusNet:</p>
+            <div className="flex items-center">
+              <label 
+                htmlFor="calendar-import" 
+                className="pkmn-button cursor-pointer"
+              >
+                Kalenderdatei auswählen
+              </label>
+              <input 
+                id="calendar-import" 
+                type="file" 
+                accept=".ics" 
+                onChange={handleFileImport}
+                className="hidden"
+              />
+            </div>
+            {importMessage && (
+              <p className={`mt-2 ${importMessage.includes('erfolgreich') ? 'text-green-600' : 'text-red-600'}`}>
+                {importMessage}
+              </p>
+            )}
           </div>
+          
+          <div className="text-sm text-gray-600">
+            <p>Hinweis: Die .ics Datei können Sie aus CampusNet exportieren:</p>
+            <ol className="list-decimal pl-5 mt-2 space-y-1">
+              <li>Studium → Belegungen → Stundenplan Export</li>
+              <li>Aktuelle Kalenderwoche auswählen</li>
+              <li>"Termine exportieren" → "Kalenderdatei"</li>
+            </ol>
+          </div>
+        </div>
+        
+        <div className="settings-section mt-8">
+          <h3 className="text-lg font-bold mb-4">Erscheinungsbild</h3>
+          <div className="flex items-center mb-2">
+            <input 
+              type="checkbox" 
+              id="dark-mode" 
+              className="mr-2"
+            />
+            <label htmlFor="dark-mode">Dunkles Theme</label>
+          </div>
+        </div>
+        
+        <div className="settings-section mt-8">
+          <h3 className="text-lg font-bold mb-4">Benachrichtigungen</h3>
+          <div className="flex items-center mb-2">
+            <input 
+              type="checkbox" 
+              id="notifications" 
+              className="mr-2"
+            />
+            <label htmlFor="notifications">Benachrichtigungen aktivieren</label>
+          </div>
+        </div>
       </div>
-
-      {/* Manual Uni Data Section (Platzhalter) */}
-      <div className="mb-6">
-          <h3 className='font-bold mb-2 border-b border-pkmn-medium pb-1'>Manual University Data</h3>
-          <p className="text-sm text-pkmn-medium">(Inputs here)</p>
-      </div>
-
-      {/* Sync Section (Platzhalter) */}
-      <div className='opacity-60'>
-          <h3 className='font-bold mb-2 border-b border-pkmn-medium pb-1'>[EXPERIMENTAL] University Sync</h3>
-          <p className="text-sm mb-2 text-pkmn-medium">Automatic fetching under consideration.</p>
-          <button className="pkmn-button" disabled>Connect (WIP)</button>
-      </div>
-
     </div>
   );
 };
+
 export default SettingsPage;

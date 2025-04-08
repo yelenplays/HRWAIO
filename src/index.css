@@ -8,23 +8,31 @@
 
 @layer base {
   body {
-    /* Hier kommt der Hintergrund hin! */
-    /* Ersetze 'bg-pattern.png' durch den Pfad zu deinem Hintergrundbild */
-    /* Fallback-Farbe, falls Bild nicht lädt */
-    @apply font-pixel bg-pkmn-dark text-pkmn-text-light;
-    background-image: url('/bg-pattern.png'); /* Nur das Bild */
-    background-repeat: no-repeat; /* Nicht wiederholen */
-    background-position: center center; /* Zentrieren */
-    background-size: cover; /* Bild füllt den Bereich, schneidet evtl. ab */
-    background-attachment: fixed; /* Hintergrund bleibt beim Scrollen stehen */
-    min-height: 100vh; /* Sicherstellen, dass body mindestens Bildschirmhöhe hat */
-
-    /* Pixel-Rendering */
-    -webkit-font-smoothing: none;
+    margin: 0;
+    font-family: 'Press Start 2P', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-smooth: never;
-    image-rendering: pixelated;
+    background-image: url('/bg-pattern.png');
+    background-repeat: repeat;
+    background-size: auto;
+    background-color: rgba(8, 24, 32, 0.35); /* Increased from 0.25 to 0.35 (10% darker) */
+    min-height: 100vh;
   }
+
+  /* Overlay für Transparenz */
+  body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(8, 24, 32, 0.35); /* Increased from 0.25 to 0.35 (10% darker) */
+    z-index: -1;
+  }
+
   img {
     image-rendering: pixelated;
   }
@@ -36,11 +44,11 @@
   /* GBC-Menü/Box Rahmen (vereinfacht mit box-shadow) */
   /* Für exakten Look: CSS border-image verwenden! */
   .gbc-border {
-    @apply p-2; /* Weniger Padding als vorher */
-    border: 4px solid #081820; /* Dunkler Außenrahmen */
-    box-shadow: inset 0 0 0 4px #f8f8f8; /* Heller Innenrahmen (fast weiß) */
-    background-color: #e0e0e0; /* Heller Grauton für Hintergrund */
-    color: #081820; /* Dunkler Text */
+    border: 4px solid #c4cfa1;
+    border-radius: 8px;
+    background-color: rgba(224, 224, 224, 0.9);
+    padding: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 
   /* Spezifische Klasse für Menü-Text */
@@ -72,5 +80,236 @@
      @apply flex-grow p-4; /* Nimmt restlichen Platz ein, mit Padding */
      /* Optional: Hintergrund für den Hauptbereich, falls er nicht transparent sein soll */
      /* background-color: rgba(255, 255, 255, 0.1); /* Leicht transparent weiß? */
+  }
+
+  /* Pokemon Button Styles */
+  .pkmn-button {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    border: 2px solid #c4cfa1;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #081820;
+  }
+
+  .pkmn-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .pkmn-button-start {
+    background-color: rgba(255, 0, 0, 0.9);
+    color: white;
+  }
+
+  .pkmn-button-pause {
+    background-color: rgba(255, 165, 0, 0.9);
+    color: white;
+  }
+
+  .pkmn-button-control {
+    background-color: rgba(0, 0, 255, 0.9);
+    color: white;
+  }
+
+  /* Pokemon Input Styles */
+  .pkmn-input {
+    padding: 0.5rem;
+    border: 2px solid #c4cfa1;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #081820;
+  }
+
+  /* Pokemon Header */
+  .pkmn-header {
+    background-color: rgba(8, 24, 32, 0.9);
+    padding: 1rem;
+    color: white;
+  }
+
+  .pkmn-header nav {
+    @apply flex space-x-6;
+  }
+
+  .pkmn-header a {
+    @apply text-pkmn-text-light hover:text-pkmn-yellow transition-colors;
+  }
+
+  .pkmn-header a.active {
+    @apply text-pkmn-yellow font-bold;
+  }
+
+  .header-hidden {
+    transform: translateY(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  /* Sidebar styles */
+  aside {
+    background-color: rgba(8, 24, 32, 0.9);
+    color: white;
+    padding: 1rem;
+    border-right: 2px solid #c4cfa1;
+  }
+
+  /* Main content area */
+  main {
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem;
+  }
+
+  /* Add these styles for the enhanced navigation links */
+  .pkmn-nav-link {
+    padding: 0.5rem 1rem;
+    margin: 0 0.25rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+
+  .pkmn-nav-link-active {
+    background-color: rgba(255, 255, 255, 0.2);
+    font-weight: bold;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+  }
+
+  .pkmn-nav-link-active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: #ffcb05; /* Pokémon yellow */
+    border-radius: 3px;
+  }
+
+  /* Dashboard Specific Styles */
+  .pkmn-dashboard-grid {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-4 mt-4;
+  }
+
+  .pkmn-dashboard-item {
+    @apply gbc-border p-4 text-center flex flex-col justify-between;
+    background-color: rgba(255, 255, 255, 0.95); /* Slightly more opaque */
+    min-height: 120px; /* Ensure consistent height */
+  }
+
+  .pkmn-dashboard-item h3 {
+    @apply text-sm font-bold uppercase text-pkmn-dark mb-2 border-b-2 border-pkmn-medium pb-1;
+  }
+
+  .pkmn-dashboard-item p {
+    @apply text-4xl font-bold text-pkmn-dark mt-auto;
+  }
+
+  .pkmn-dashboard-empty {
+    @apply text-center text-pkmn-medium py-10;
+  }
+
+  .pkmn-dashboard-empty p {
+    @apply mb-4;
+  }
+
+  /* --- Dark Theme --- */
+  body.dark {
+    background-color: rgba(10, 20, 25, 0.85); /* Darker background */
+    color: #e0e0e0; /* Lighter default text */
+  }
+
+  body.dark::before {
+    background-color: rgba(10, 20, 25, 0.85); /* Matching overlay */
+  }
+
+  .dark .gbc-border {
+    border-color: #5a6b4e; /* Darker border */
+    background-color: rgba(30, 40, 45, 0.95); /* Darker card background */
+    color: #e0e0e0;
+  }
+
+  .dark .pkmn-button {
+    background-color: rgba(60, 70, 75, 0.9);
+    border-color: #5a6b4e;
+    color: #e0e0e0;
+  }
+
+  .dark .pkmn-button:hover {
+    background-color: rgba(80, 90, 95, 0.9);
+  }
+
+  .dark .pkmn-button-start {
+    background-color: rgba(180, 0, 0, 0.9);
+  }
+  
+  .dark .pkmn-button-pause {
+    background-color: rgba(180, 100, 0, 0.9);
+  }
+  
+  .dark .pkmn-button-control {
+    background-color: rgba(0, 0, 180, 0.9);
+  }
+
+  .dark .pkmn-input {
+    background-color: rgba(60, 70, 75, 0.9);
+    border-color: #5a6b4e;
+    color: #e0e0e0;
+  }
+
+  .dark .pkmn-header {
+    background-color: rgba(0, 10, 15, 0.95);
+    color: #c4cfa1;
+  }
+
+  .dark .pkmn-header a {
+    color: #c4cfa1;
+  }
+
+  .dark .pkmn-header a.active {
+    color: #ffcb05; /* Keep active yellow bright */
+  }
+
+  .dark aside {
+    background-color: rgba(0, 10, 15, 0.95);
+    border-right-color: #5a6b4e;
+    color: #c4cfa1;
+  }
+
+  .dark .gbc-menu-text {
+    color: #e0e0e0;
+  }
+
+  .dark .gbc-menu-text.active {
+    background-color: rgba(80, 90, 95, 0.8);
+  }
+
+  .dark .gbc-menu-text.active::before {
+    border-left-color: #e0e0e0;
+  }
+
+  .dark .pkmn-dashboard-item h3 {
+    color: #c4cfa1;
+    border-color: #5a6b4e;
+  }
+
+  .dark .pkmn-dashboard-item p {
+    color: #e0e0e0;
+  }
+
+  .dark .pkmn-dashboard-empty {
+    color: #a0a0a0;
+  }
+
+  .dark .pkmn-nav-link-active {
+    background-color: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6);
+  }
+
+  .dark .pkmn-nav-link-active::after {
+    background-color: #ffcb05; /* Keep yellow bright */
   }
 }

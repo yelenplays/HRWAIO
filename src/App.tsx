@@ -1,29 +1,81 @@
 // src/App.tsx - Sollte so schon passen
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout'; // Stellt sicher, dass dieses Layout importiert wird
-import DashboardPage from './pages/DashboardPage';
-import SchedulePage from './pages/SchedulePage';
-import TasksPage from './pages/TasksPage';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { firebaseService } from './services/firebaseService';
+import { useLocalStorage } from './hooks/useLocalStorage';
+import Auth from './components/Auth';
+import ProfilePage from './pages/ProfilePage';
+import UniversityDashboard from './components/UniversityDashboard';
 import PomodoroPage from './pages/PomodoroPage';
 import SettingsPage from './pages/SettingsPage';
+import TasksPage from './pages/TasksPage';
+import SchedulePage from './pages/SchedulePage';
 import NotFoundPage from './pages/NotFoundPage';
+import Header from './components/Header';
+import Sidebar from './components/Sidebar';
 
-function App() {
+const App: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDarkMode] = useLocalStorage('darkMode', false);
+
+  useEffect(() => {
+    const checkSession = () => {
+      const currentUser = firebaseService.getCurrentUser();
+      setIsLoggedIn(!!currentUser);
+      setIsLoading(false);
+    };
+
+    checkSession();
+  }, []);
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pkmn-yellow"></div>
+      </div>
+    );
+  }
+
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}> {/* Layout als Parent */}
-          <Route index element={<DashboardPage />} />
-          <Route path="schedule" element={<SchedulePage />} />
-          <Route path="tasks" element={<TasksPage />} />
-          <Route path="pomodoro" element={<PomodoroPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </Routes>
+      <div className={`min-h-screen flex flex-col ${isDarkMode ? 'dark-mode-active' : ''}`}>
+        {isLoggedIn ? (
+          <>
+            <Header />
+            <div className="flex flex-grow">
+              <Sidebar />
+              <main className="flex-grow p-4 m-4 gbc-border shadow-lg">
+                <Routes>
+                  <Route path="/" element={<UniversityDashboard />} />
+                  <Route path="/dashboard" element={<UniversityDashboard />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/pomodoro" element={<PomodoroPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/tasks" element={<TasksPage />} />
+                  <Route path="/schedule" element={<SchedulePage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </main>
+            </div>
+          </>
+        ) : (
+          <Routes>
+            <Route path="/" element={<Auth />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        )}
+      </div>
     </Router>
   );
-}
+};
 
 export default App;

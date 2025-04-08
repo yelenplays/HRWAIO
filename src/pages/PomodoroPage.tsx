@@ -1,159 +1,186 @@
 // src/pages/PomodoroPage.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import PokeballCounter from '../components/widgets/PokeballCounter';
 
-// Typen für Einstellungen und Timer-Modus
+// Types
 interface PomodoroSettings {
   workMinutes: number;
   shortBreakMinutes: number;
   longBreakMinutes: number;
   sessionsBeforeLongBreak: number;
 }
-type TimerMode = 'Work' | 'Short Break' | 'Long Break';
+type TimerMode = 'Arbeit' | 'Kurze Pause' | 'Lange Pause';
 
-// Hilfsfunktion zum Formatieren der Zeit
+// Formatting function
 const formatTime = (timeInSeconds: number): string => {
   const minutes = Math.floor(timeInSeconds / 60);
   const seconds = timeInSeconds % 60;
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 };
 
-const PomodoroPage: React.FC = () => {
-  // Lade Einstellungen aus localStorage oder verwende Standards
-  const [settings] = useLocalStorage<PomodoroSettings>('pomodoroSettings', {
-    workMinutes: 25,
-    shortBreakMinutes: 5,
-    longBreakMinutes: 15,
-    sessionsBeforeLongBreak: 4,
-  });
+// Audio hook
+const useAudio = (src: string) => {
+  const audioRef = useRef<any>(null);
 
-  // State für den Timer
-  const [mode, setMode] = useState<TimerMode>('Work');
-  const [timeLeft, setTimeLeft] = useState(settings.workMinutes * 60); // Zeit in Sekunden
+  useEffect(() => {
+    // Only execute in browser
+    if (typeof Audio !== "undefined") {
+      try {
+        const audioInstance = new Audio(src);
+        audioInstance.load(); // Try to preload
+        audioRef.current = audioInstance;
+      } catch (e) {
+        console.error(`Error loading audio: ${src}`, e);
+        audioRef.current = null; // Set ref to null on error
+      }
+    }
+  }, [src]);
+
+  const play = useCallback(() => {
+    if (audioRef.current && audioRef.current.play) {
+      // Try to play, catch errors (e.g., interaction needed)
+      audioRef.current.play().catch((e: Error) => console.error(`Error playing audio: ${src}`, e));
+    }
+  }, [src]);
+
+  return play;
+};
+
+const PomodoroPage: React.FC = () => {
+  const [settings] = useLocalStorage<PomodoroSettings>('pomodoroSettings', {
+    workMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15, sessionsBeforeLongBreak: 4,
+  });
+  const [mode, setMode] = useState<TimerMode>('Arbeit');
+  const [timeLeft, setTimeLeft] = useState(settings.workMinutes * 60);
   const [isActive, setIsActive] = useState(false);
   const [completedSessions, setCompletedSessions] = useState(0);
-
-  // Ref für das Interval, um es stoppen zu können
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Funktion zum Wechseln des Modus und Reseten des Timers
+  // Audio hooks - commented out until audio files are available
+  // const playStartSound = useAudio('/assets/audio/start.wav');
+  // const playCompleteSound = useAudio('/assets/audio/complete.wav');
+  
+  // Placeholder functions for audio
+  const playStartSound = useCallback(() => {
+    console.log('Start sound would play here');
+  }, []);
+  
+  const playCompleteSound = useCallback(() => {
+    console.log('Complete sound would play here');
+  }, []);
+
   const switchMode = useCallback((nextMode: TimerMode) => {
     setMode(nextMode);
-    setIsActive(false); // Timer stoppen beim Moduswechsel
-
+    setIsActive(false);
     switch (nextMode) {
-      case 'Work':
-        setTimeLeft(settings.workMinutes * 60);
-        break;
-      case 'Short Break':
-        setTimeLeft(settings.shortBreakMinutes * 60);
-        break;
-      case 'Long Break':
+      case 'Arbeit': setTimeLeft(settings.workMinutes * 60); break;
+      case 'Kurze Pause': setTimeLeft(settings.shortBreakMinutes * 60); break;
+      case 'Lange Pause':
         setTimeLeft(settings.longBreakMinutes * 60);
-        setCompletedSessions(0); // Zähler für lange Pause zurücksetzen
+        setCompletedSessions(0);
         break;
     }
-  }, [settings]); // Abhängig von den Einstellungen
+  }, [settings]);
 
-   // Haupt-Effekt für den Countdown
   useEffect(() => {
     if (isActive && timeLeft > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
+      intervalRef.current = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     } else if (timeLeft === 0) {
-       // Timer abgelaufen!
       if (intervalRef.current) clearInterval(intervalRef.current);
+      playCompleteSound();
+      alert(`${mode} beendet!`);
 
-      // Sound abspielen (optional, braucht eine Sounddatei)
-      // const audio = new Audio('/path/to/your/sound.mp3');
-      // audio.play();
-       alert(`${mode} session finished!`); // Einfacher Alert
-
-      // Nächsten Modus bestimmen
-      if (mode === 'Work') {
-          const newSessionCount = completedSessions + 1;
-          setCompletedSessions(newSessionCount);
-          if (newSessionCount % settings.sessionsBeforeLongBreak === 0) {
-              switchMode('Long Break');
-          } else {
-              switchMode('Short Break');
-          }
-      } else { // Nach einer Pause kommt immer Arbeit
-          switchMode('Work');
+      if (mode === 'Arbeit') {
+        const newSessionCount = completedSessions + 1;
+        setCompletedSessions(newSessionCount);
+        if (newSessionCount >= settings.sessionsBeforeLongBreak) {
+          switchMode('Lange Pause');
+        } else {
+          switchMode('Kurze Pause');
+        }
+      } else {
+        switchMode('Arbeit');
       }
-
     } else {
-       // Timer ist nicht aktiv oder Zeit > 0
-       if (intervalRef.current) clearInterval(intervalRef.current);
-    }
-
-    // Aufräumfunktion: Interval löschen, wenn Komponente unmountet oder isActive/timeLeft sich ändert
-    return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isActive, timeLeft, mode, completedSessions, settings, switchMode]); // Abhängigkeiten des Effekts
+    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [isActive, timeLeft, mode, completedSessions, settings, switchMode, playCompleteSound]);
 
-  // Effekt, um Timer neu zu setzen, wenn Einstellungen geändert werden
-  // (während der Timer NICHT läuft)
   useEffect(() => {
-      if (!isActive) {
-          switch(mode) {
-              case 'Work': setTimeLeft(settings.workMinutes * 60); break;
-              case 'Short Break': setTimeLeft(settings.shortBreakMinutes * 60); break;
-              case 'Long Break': setTimeLeft(settings.longBreakMinutes * 60); break;
-          }
+    if (!isActive) {
+      switch (mode) {
+        case 'Arbeit': setTimeLeft(settings.workMinutes * 60); break;
+        case 'Kurze Pause': setTimeLeft(settings.shortBreakMinutes * 60); break;
+        case 'Lange Pause': setTimeLeft(settings.longBreakMinutes * 60); break;
       }
-  }, [settings, mode, isActive]); // Abhängig von Einstellungen etc.
+    }
+  }, [settings, mode, isActive]);
 
-  // Handler für Buttons
-  const toggleTimer = () => setIsActive(!isActive);
-  const handleReset = () => switchMode(mode); // Reset zum aktuellen Modus
+  const toggleTimer = () => {
+    const nextIsActive = !isActive;
+    setIsActive(nextIsActive);
+    if (nextIsActive) {
+      playStartSound();
+    }
+  };
+
+  const handleReset = () => {
+    switchMode(mode);
+  };
+
+  const handleSkip = () => {
+    if (window.confirm(`Aktuelle ${mode} überspringen?`)) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      playCompleteSound();
+
+      const nextSession = mode === 'Arbeit' ? completedSessions + 1 : completedSessions;
+      setCompletedSessions(nextSession);
+      if (mode === 'Arbeit' && nextSession >= settings.sessionsBeforeLongBreak) {
+        switchMode('Lange Pause');
+      } else if (mode === 'Arbeit') {
+        switchMode('Kurze Pause');
+      } else {
+        switchMode('Arbeit');
+      }
+    }
+  };
 
   return (
-    <div className="gbc-border">
-       <h2 className='text-lg font-bold mb-3 uppercase tracking-wide'>FOCUS TIMER</h2>
-       <div className="text-center">
-          {/* Aktueller Modus */}
-          <p className="mb-4">Mode: <span className='font-bold'>{mode}</span> ({completedSessions}/{settings.sessionsBeforeLongBreak})</p>
+    <div className="gbc-border flex flex-col items-center justify-center h-full bg-opacity-95 shadow-lg">
+      <h2 className='text-lg font-bold mb-2 uppercase tracking-wide self-start text-pkmn-dark'>FOKUS TIMER</h2>
 
-          {/* Verbleibende Zeit */}
-          <p className="text-6xl mb-6 font-bold">{formatTime(timeLeft)}</p>
+      <div className="flex flex-col items-center text-center flex-grow justify-center w-full">
+        <p className="mb-1 text-pkmn-dark">Modus: <span className='font-bold'>{mode}</span></p>
 
-          {/* Steuerungsbuttons */}
-          <div className="space-x-3">
-              <button onClick={toggleTimer} className="pkmn-button">
-                  {isActive ? 'PAUSE' : 'START'}
-              </button>
-              <button onClick={handleReset} className="pkmn-button">
-                  RESET
-              </button>
-               {/* Optionaler Skip-Button */}
-               <button
-                  onClick={() => {
-                      if (window.confirm(`Skip current ${mode} session?`)) {
-                        // Direkten Moduswechsel auslösen (simuliert Timer-Ende)
-                        if (intervalRef.current) clearInterval(intervalRef.current);
-                        const nextSession = mode === 'Work' ? completedSessions + 1 : completedSessions;
-                        setCompletedSessions(nextSession);
-                        if (mode === 'Work' && nextSession % settings.sessionsBeforeLongBreak === 0) {
-                            switchMode('Long Break');
-                        } else if (mode === 'Work') {
-                            switchMode('Short Break');
-                        } else {
-                            switchMode('Work');
-                        }
-                      }
-                  }}
-                  className="pkmn-button"
-                  title="Skip to next session"
-              >
-                  SKIP
-              </button>
-          </div>
-       </div>
+        {mode === 'Arbeit' && (
+          <PokeballCounter
+            completed={completedSessions}
+            total={settings.sessionsBeforeLongBreak}
+          />
+        )}
+        
+        {mode !== 'Arbeit' && (
+          <div className='h-6 my-3'></div>
+        )}
+
+        <p className="text-6xl mb-4 font-bold text-pkmn-dark">{formatTime(timeLeft)}</p>
+
+        <div className="flex justify-center items-center space-x-5">
+          <button onClick={toggleTimer} className={`pkmn-button ${isActive ? 'pkmn-button-pause' : 'pkmn-button-start'}`}>
+            {isActive ? 'PAUSE' : 'START'}
+          </button>
+          <button onClick={handleReset} className="pkmn-button pkmn-button-control">
+            ZURÜCK
+          </button>
+          <button onClick={handleSkip} className="pkmn-button pkmn-button-control">
+            ÜBERSPRINGEN
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default PomodoroPage;  
+export default PomodoroPage;

@@ -25,12 +25,54 @@ const Header: React.FC = () => {
   return (
     <header className={`pkmn-header ${isVisible ? '' : 'header-hidden'}`}>
       <nav className="flex justify-center items-center">
-        {/* NavLink fügt automatisch die 'active' Klasse hinzu */}
-        <NavLink to="/">Status</NavLink>
-        <NavLink to="/schedule">Calendar</NavLink>
-        <NavLink to="/tasks">Quest Log</NavLink>
-        <NavLink to="/pomodoro">Timer</NavLink>
-        <NavLink to="/settings">Options</NavLink>
+        <NavLink 
+          to="/" 
+          className={({ isActive }) => 
+            `pkmn-nav-link ${isActive ? 'pkmn-nav-link-active' : ''}`
+          }
+        >
+          Dashboard
+        </NavLink>
+        <NavLink 
+          to="/schedule" 
+          className={({ isActive }) => 
+            `pkmn-nav-link ${isActive ? 'pkmn-nav-link-active' : ''}`
+          }
+        >
+          Kalender
+        </NavLink>
+        <NavLink 
+          to="/tasks" 
+          className={({ isActive }) => 
+            `pkmn-nav-link ${isActive ? 'pkmn-nav-link-active' : ''}`
+          }
+        >
+          Planer
+        </NavLink>
+        <NavLink 
+          to="/pomodoro" 
+          className={({ isActive }) => 
+            `pkmn-nav-link ${isActive ? 'pkmn-nav-link-active' : ''}`
+          }
+        >
+          Lerntimer
+        </NavLink>
+        <NavLink 
+          to="/profile" 
+          className={({ isActive }) => 
+            `pkmn-nav-link ${isActive ? 'pkmn-nav-link-active' : ''}`
+          }
+        >
+          Profil
+        </NavLink>
+        <NavLink 
+          to="/settings" 
+          className={({ isActive }) => 
+            `pkmn-nav-link ${isActive ? 'pkmn-nav-link-active' : ''}`
+          }
+        >
+          Optionen
+        </NavLink>
       </nav>
     </header>
   );
