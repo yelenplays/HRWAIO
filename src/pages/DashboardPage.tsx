@@ -1,5 +1,5 @@
 import React from 'react';
-import { UniversityDashboard } from '../components/UniversityDashboard';
+import UniversityDashboard from '../components/UniversityDashboard';
 // Später: Widgets importieren
 
 const DashboardPage: React.FC = () => {

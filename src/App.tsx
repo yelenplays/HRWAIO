@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { firebaseService } from './services/firebaseService';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './services/firebaseService';
 import Auth from './components/Auth';
 import ProfilePage from './pages/ProfilePage';
 import UniversityDashboard from './components/UniversityDashboard';
@@ -20,13 +22,13 @@ const App: React.FC = () => {
   const [isDarkMode] = useLocalStorage('darkMode', false);
 
   useEffect(() => {
-    const checkSession = () => {
-      const currentUser = firebaseService.getCurrentUser();
-      setIsLoggedIn(!!currentUser);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsLoggedIn(!!user);
       setIsLoading(false);
-    };
+    });
 
-    checkSession();
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 // src/pages/PomodoroPage.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import PokeballCounter from '../components/widgets/PokeballCounter';
+// import { PokeballCounter } from '../components/PokeballCounter'; // Assuming PokeballCounter is in components
 
 // Types
 interface PomodoroSettings {
@@ -19,33 +19,16 @@ const formatTime = (timeInSeconds: number): string => {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 };
 
-// Audio hook
+// Custom hook for audio playback (placeholder)
+/*
 const useAudio = (src: string) => {
-  const audioRef = useRef<any>(null);
-
-  useEffect(() => {
-    // Only execute in browser
-    if (typeof Audio !== "undefined") {
-      try {
-        const audioInstance = new Audio(src);
-        audioInstance.load(); // Try to preload
-        audioRef.current = audioInstance;
-      } catch (e) {
-        console.error(`Error loading audio: ${src}`, e);
-        audioRef.current = null; // Set ref to null on error
-      }
-    }
-  }, [src]);
-
-  const play = useCallback(() => {
-    if (audioRef.current && audioRef.current.play) {
-      // Try to play, catch errors (e.g., interaction needed)
-      audioRef.current.play().catch((e: Error) => console.error(`Error playing audio: ${src}`, e));
-    }
-  }, [src]);
-
-  return play;
+  // In a real app, you'd use the Audio API
+  const play = () => console.log(`Playing sound: ${src}`);
+  const pause = () => console.log(`Pausing sound: ${src}`);
+  // Placeholder: return controls
+  return { play, pause }; 
 };
+*/
 
 const PomodoroPage: React.FC = () => {
   const [settings] = useLocalStorage<PomodoroSettings>('pomodoroSettings', {
@@ -154,15 +137,17 @@ const PomodoroPage: React.FC = () => {
       <div className="flex flex-col items-center text-center flex-grow justify-center w-full">
         <p className="mb-1 text-pkmn-dark">Modus: <span className='font-bold'>{mode}</span></p>
 
-        {mode === 'Arbeit' && (
-          <PokeballCounter
-            completed={completedSessions}
-            total={settings.sessionsBeforeLongBreak}
-          />
-        )}
-        
+        {/* Pokémon Ball counter display during work sessions */}
+        {/* {mode === 'Arbeit' && (
+          // <PokeballCounter
+          //   completed={completedSessions}
+          //   total={settings.sessionsBeforeLongBreak}
+          // />
+        )} */}
+
+        {/* Placeholder for spacing when not in work mode */}
         {mode !== 'Arbeit' && (
-          <div className='h-6 my-3'></div>
+          <div className='h-6 my-3'></div> // Maintain consistent height
         )}
 
         <p className="text-6xl mb-4 font-bold text-pkmn-dark">{formatTime(timeLeft)}</p>

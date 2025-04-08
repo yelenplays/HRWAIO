@@ -1,6 +1,17 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
-import { getAnalytics } from 'firebase/analytics';
+import {
+  getFirestore, doc, setDoc, getDoc, updateDoc, DocumentData
+} from 'firebase/firestore';
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User
+} from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
+// import { getAnalytics } from 'firebase/analytics';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -13,16 +24,17 @@ const firebaseConfig = {
   measurementId: "G-VP3MWXVF3K"
 };
 
-// Initialize Firebase
+// Initialize Firebase with simpler configuration
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const analytics = getAnalytics(app);
+const auth = getAuth(app);
+const storage = getStorage(app);
 
-// User data interface
-export interface UserData {
-  username: string;
+// User profile data interface (stored in Firestore)
+export interface UserProfile {
+  uid: string;
+  email: string;
   name: string;
-  password: string;
   universityData?: {
     totalCredits: number;
     gpa: number;
@@ -30,152 +42,116 @@ export interface UserData {
   };
 }
 
-// Hardcoded user for testing
-const hardcodedUser: UserData = {
-  username: "yeyotrap",
-  name: "Test User",
-  password: "Collen5050",
-  universityData: {
-    totalCredits: 120,
-    gpa: 3.5,
-    remainingModules: 5
+// --- Firebase Auth Integration ---
+
+// Listen for authentication state changes
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log('Auth state changed: User signed in:', user.uid, user.email);
+  } else {
+    console.log('Auth state changed: User signed out');
   }
-};
+});
 
-// Simple user management
+// Firebase Service Object
 export const firebaseService = {
-  // Register a new user
-  async register(username: string, password: string, name: string): Promise<UserData> {
+  // Register a new user using Firebase Auth and store profile in Firestore
+  async register(email: string, password: string, name: string): Promise<User> {
     try {
-      // For testing, just return the hardcoded user if credentials match
-      if (username === hardcodedUser.username && password === hardcodedUser.password) {
-        return hardcodedUser;
-      }
-      
-      // Check if username already exists
-      const userRef = doc(db, 'users', username);
-      const userDoc = await getDoc(userRef);
-      if (userDoc.exists()) {
-        throw new Error('Username already exists');
-      }
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      // Create new user
-      const userData: UserData = {
-        username,
-        name,
-        password, // In a real app, you would hash the password
+      // Create user profile document in Firestore
+      const userRef = doc(db, 'users', user.uid);
+      const userProfileData: Omit<UserProfile, 'universityData'> = {
+        uid: user.uid,
+        email: user.email || email,
+        name: name,
       };
-      await setDoc(userRef, userData);
-      return userData;
+      await setDoc(userRef, userProfileData);
+      console.log('User registered and profile created:', user.uid);
+      return user;
     } catch (error) {
       console.error('Error registering user:', error);
       throw error;
     }
   },
 
-  // Login a user
-  async login(username: string, password: string): Promise<UserData> {
+  // Login a user using Firebase Auth
+  async login(email: string, password: string): Promise<User> {
     try {
-      // For testing, just return the hardcoded user if credentials match
-      if (username === hardcodedUser.username && password === hardcodedUser.password) {
-        return hardcodedUser;
-      }
-      
-      const userRef = doc(db, 'users', username);
-      const userDoc = await getDoc(userRef);
-      if (!userDoc.exists()) {
-        throw new Error('User not found');
-      }
-
-      const userData = userDoc.data() as UserData;
-      if (userData.password !== password) {
-        throw new Error('Invalid password');
-      }
-
-      return userData;
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('User logged in:', userCredential.user.uid);
+      return userCredential.user;
     } catch (error) {
       console.error('Error logging in:', error);
       throw error;
     }
   },
 
-  // Logout
+  // Logout the current user
   async logout(): Promise<void> {
-    localStorage.removeItem('username');
-    localStorage.removeItem('name');
-    localStorage.removeItem('password');
+    try {
+      await signOut(auth);
+      console.log('User logged out');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      throw error;
+    }
   },
 
-  // Save university data
-  async saveUniversityData(username: string, data: UserData['universityData'] | undefined): Promise<void> {
+  // Get user profile data from Firestore using UID
+  async getUserProfile(uid: string): Promise<UserProfile | null> {
+    if (!uid) return null;
     try {
-      // For testing, just update the hardcoded user
-      if (username === hardcodedUser.username) {
-        hardcodedUser.universityData = data;
-        return;
+      const userRef = doc(db, 'users', uid);
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) {
+        console.warn('User profile not found in Firestore for uid:', uid);
+        return null;
       }
-      
-      const userRef = doc(db, 'users', username);
+      return userDoc.data() as UserProfile;
+    } catch (error) {
+      console.error('Error getting user profile:', error);
+      throw error;
+    }
+  },
+
+  // Update user profile data in Firestore
+  async updateUserProfile(uid: string, data: Partial<Pick<UserProfile, 'name' | 'universityData'>>): Promise<void> {
+    if (!uid) throw new Error("User ID is required to update profile.");
+    try {
+      const userRef = doc(db, 'users', uid);
+      const updateData: Partial<UserProfile> = { ...data };
+      delete (updateData as any).uid;
+      delete (updateData as any).email;
+
+      await updateDoc(userRef, updateData);
+      console.log('User profile updated for uid:', uid);
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw error;
+    }
+  },
+
+  // Save/Update university data
+  async saveUniversityData(uid: string, data: UserProfile['universityData']): Promise<void> {
+    if (!uid) throw new Error("User ID is required to save university data.");
+    try {
+      const userRef = doc(db, 'users', uid);
       await updateDoc(userRef, { universityData: data });
+      console.log('University data saved for uid:', uid);
     } catch (error) {
       console.error('Error saving university data:', error);
       throw error;
     }
   },
 
-  // Get user data
-  async getUserData(username: string): Promise<UserData | null> {
-    try {
-      // For testing, just return the hardcoded user if username matches
-      if (username === hardcodedUser.username) {
-        return hardcodedUser;
-      }
-      
-      const userRef = doc(db, 'users', username);
-      const userDoc = await getDoc(userRef);
-      if (!userDoc.exists()) {
-        return null;
-      }
-      return userDoc.data() as UserData;
-    } catch (error) {
-      console.error('Error getting user data:', error);
-      throw error;
-    }
-  },
+  // Get current Auth user
+  getCurrentAuthUser(): User | null {
+    return auth.currentUser;
+  }
+};
 
-  // Get current user (from localStorage)
-  getCurrentUser(): UserData | null {
-    const username = localStorage.getItem('username');
-    if (!username) {
-      return null;
-    }
-    
-    // For testing, just return the hardcoded user if username matches
-    if (username === hardcodedUser.username) {
-      return hardcodedUser;
-    }
-    
-    return { 
-      username, 
-      name: localStorage.getItem('name') || '', 
-      password: localStorage.getItem('password') || '' 
-    };
-  },
-
-  // Update user profile
-  async updateUserProfile(username: string, data: Partial<UserData>): Promise<void> {
-    try {
-      // For testing, just update the hardcoded user
-      if (username === hardcodedUser.username) {
-        Object.assign(hardcodedUser, data);
-        return;
-      }
-      
-      const userRef = doc(db, 'users', username);
-      await updateDoc(userRef, data);
-    } catch (error) {
-      console.error('Error updating user profile:', error);
-      throw error;
-    }
-  },
-}; 
+// Export Firestore db, Storage instance, and auth
+export { db, storage, auth }; 

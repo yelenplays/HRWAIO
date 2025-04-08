@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { firebaseService, UserData } from '../services/firebaseService';
+import { firebaseService, UserProfile } from '../services/firebaseService';
 import { useNavigate } from 'react-router-dom';
+import { auth } from '../services/firebaseService';
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [userData, setUserData] = useState<UserProfile | null>(null);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -15,15 +16,14 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const currentUser = firebaseService.getCurrentUser();
+        const currentUser = auth.currentUser;
         if (currentUser) {
-          const userData = await firebaseService.getUserData(currentUser.username);
+          const userData = await firebaseService.getUserProfile(currentUser.uid);
           if (userData) {
             setUserData(userData);
             setName(userData.name);
             setIsLoggedIn(true);
           } else {
-            // User data not found, clear session
             await firebaseService.logout();
             setIsLoggedIn(false);
           }
@@ -60,7 +60,7 @@ const ProfilePage: React.FC = () => {
     setError(null);
     
     try {
-      await firebaseService.updateUserProfile(userData.username, { name });
+      await firebaseService.updateUserProfile(userData.uid, { name });
       setUserData({ ...userData, name });
       setIsEditing(false);
     } catch (error) {
@@ -96,74 +96,67 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Profile</h1>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-          >
-            Logout
-          </button>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Profile</h1>
+      
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
         </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">Username</h2>
-            <p className="text-gray-700">{userData?.username}</p>
-          </div>
-
-          {isEditing ? (
-            <div>
-              <h2 className="text-lg font-semibold">Name</h2>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-              <div className="mt-2 flex space-x-2">
-                <button
-                  onClick={handleSaveProfile}
-                  disabled={isLoading}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:bg-indigo-400"
-                >
-                  {isLoading ? 'Saving...' : 'Save'}
-                </button>
-                <button
-                  onClick={() => {
-                    setIsEditing(false);
-                    setName(userData?.name || '');
-                  }}
-                  className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
+      )}
+      
+      {userData && (
+        <div className="bg-white shadow-md rounded-lg p-6">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">User Information</h2>
+            {isEditing ? (
+              <div className="mt-2">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="border rounded px-3 py-2 w-full"
+                />
+                <div className="mt-2 flex space-x-2">
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={isLoading}
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                  >
+                    {isLoading ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div>
-              <h2 className="text-lg font-semibold">Name</h2>
-              <div className="flex items-center">
-                <p className="text-gray-700">{userData?.name}</p>
+            ) : (
+              <div className="mt-2">
+                <p><strong>Name:</strong> {userData.name}</p>
+                <p><strong>Email:</strong> {userData.email}</p>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="ml-2 text-indigo-600 hover:text-indigo-800"
+                  className="mt-2 bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600"
                 >
-                  Edit
+                  Edit Profile
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+          
+          <div className="mt-6">
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            >
+              Logout
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

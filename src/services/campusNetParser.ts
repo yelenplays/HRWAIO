@@ -1,4 +1,5 @@
-import { UserData } from './firebaseService';
+// import { UserData } from './firebaseService'; // Vorerst nicht benötigt
+// import axios from 'axios'; // Derzeit nicht für Parsing benötigt
 
 export interface ParsedModule {
   code: string;
